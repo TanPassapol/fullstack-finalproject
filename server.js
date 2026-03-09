@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -7,6 +6,14 @@ import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import os from 'os';
 import dotenv from 'dotenv';
+
+import authRoutes from './src/backend/routes/auth.js';
+import bookRoutes from './src/backend/routes/books.js';
+import transactionRoutes from './src/backend/routes/transactions.js';
+import userRoutes from './src/backend/routes/users.js';
+import reviewRoutes from './src/backend/routes/reviews.js';
+import adminRoutes from './src/backend/routes/admin.js';
+import { verifyToken, requireRole } from './src/backend/middleware/auth.js';
 
 dotenv.config();
 const app = express();
@@ -34,16 +41,14 @@ mongoose
   .catch((err) => console.error('❌ MongoDB error:', err));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',         require('./src/backend/routes/auth'));
-app.use('/api/books',        require('./src/backend/routes/books'));
-app.use('/api/transactions', require('./src/backend/routes/transactions'));
-app.use('/api/users',        require('./src/backend/routes/users'));
-app.use('/api/reviews',      require('./src/backend/routes/reviews'));
-app.use('/api/admin',        require('./src/backend/routes/admin'));
+app.use('/api/auth',         authRoutes);
+app.use('/api/books',        bookRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/users',        userRoutes);
+app.use('/api/reviews',      reviewRoutes);
+app.use('/api/admin',        adminRoutes);
 
 // ─── System Monitor ───────────────────────────────────────────────────────────
-const { verifyToken, requireRole } = require('./src/backend/middleware/auth');
-
 app.get('/api/monitor/system', verifyToken, requireRole('admin'), (req, res) => {
   const cpus     = os.cpus();
   const totalMem = os.totalmem();
@@ -84,7 +89,7 @@ app.get('/api/health', (req, res) =>
 );
 
 // ─── Error Handler ────────────────────────────────────────────────────────────
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });

@@ -1,2 +1,1 @@
-const { TokenBlacklist } = require('./index');
-module.exports = TokenBlacklist;
+export { TokenBlacklist as default } from './index.js';
