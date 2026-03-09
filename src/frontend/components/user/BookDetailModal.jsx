@@ -1,26 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api';
 import BookCover from '../shared/BookCover';
 import Stars from '../shared/Stars';
 import Badge from '../shared/Badge';
 import { formatDate } from '../../shared/utils';
 
-const MOCK_REVIEWS = [
-  { _id: 'r1', rating: 5, comment: 'Absolutely brilliant!',         user: { name: 'Alex' } },
-  { _id: 'r2', rating: 4, comment: 'Great read, highly recommended.', user: { name: 'Maria' } },
-];
-
 export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, inCart }) {
   const { user } = useAuth();
-  const [rating,  setRating]  = useState(0);
-  const [comment, setComment] = useState('');
-  const reviews = MOCK_REVIEWS; // swap with API call when backend is live
+  const [reviews,  setReviews]  = useState([]);
+  const [rating,   setRating]   = useState(0);
+  const [comment,  setComment]  = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.get(`/reviews?bookId=${book._id}`)
+      .then(({ data }) => setReviews(data.reviews || data))
+      .catch(() => setReviews([]));
+  }, [book._id]);
+
+  const submitReview = async () => {
+    if (!rating) return;
+    setSubmitting(true);
+    try {
+      await api.post('/reviews', { bookId: book._id, rating, comment });
+      const { data } = await api.get(`/reviews?bookId=${book._id}`);
+      setReviews(data.reviews || data);
+      setRating(0);
+      setComment('');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to submit review.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box p-6" onClick={(e) => e.stopPropagation()}>
 
-        {/* Header */}
         <div className="flex gap-4 mb-4">
           <BookCover book={book} className="w-32 h-44 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -30,7 +48,7 @@ export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, 
             <div className="flex items-center gap-2 mt-2">
               <Stars rating={book.avgRating} />
               <span className="text-sm text-gray-400">
-                {book.avgRating.toFixed(1)} · {book.ratingCount} reviews
+                {book.avgRating?.toFixed(1)} · {book.ratingCount} reviews
               </span>
             </div>
 
@@ -50,17 +68,13 @@ export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, 
 
             <div className="mt-3 flex items-center gap-2">
               <Badge status={book.available > 0 ? 'available' : 'borrowed'} />
-              <span className="text-xs text-gray-400">
-                {book.available}/{book.totalCopies} copies
-              </span>
+              <span className="text-xs text-gray-400">{book.available}/{book.totalCopies} copies</span>
             </div>
           </div>
         </div>
 
-        {/* Description */}
         <p className="text-sm text-gray-300 leading-relaxed mb-4">{book.description}</p>
 
-        {/* Actions */}
         {user && (
           <div className="flex gap-2 mb-5">
             <button className="btn btn-secondary btn-sm flex-1" onClick={() => onAddToCart(book)}>
@@ -77,7 +91,6 @@ export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, 
           </div>
         )}
 
-        {/* Reviews */}
         <div className="border-t border-vault-border pt-4">
           <h3 className="font-semibold text-vault-cream mb-3">Reviews</h3>
 
@@ -91,13 +104,13 @@ export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, 
                 <div className="flex items-center gap-2 mb-1">
                   <Stars rating={r.rating} />
                   <span className="text-xs text-gray-400">{r.user?.name || 'Reader'}</span>
+                  <span className="text-xs text-gray-600 ml-auto">{formatDate(r.createdAt)}</span>
                 </div>
                 <p className="text-xs text-gray-300">{r.comment}</p>
               </div>
             ))}
           </div>
 
-          {/* Submit review */}
           {user && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-2">
@@ -110,8 +123,12 @@ export default function BookDetailModal({ book, onClose, onBorrow, onAddToCart, 
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
-              <button className="btn btn-primary btn-sm w-full" disabled={!rating}>
-                Submit Review
+              <button
+                className="btn btn-primary btn-sm w-full"
+                disabled={!rating || submitting}
+                onClick={submitReview}
+              >
+                {submitting ? 'Submitting…' : 'Submit Review'}
               </button>
             </div>
           )}

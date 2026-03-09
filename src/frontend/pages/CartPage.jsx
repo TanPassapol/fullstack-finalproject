@@ -22,7 +22,7 @@ export default function CartPage({ cart, setCart, onBorrow }) {
     return (
       <div className="animate-fade-in text-center py-20">
         <div className="text-5xl mb-4">🛒</div>
-        <h2 className="font-display text-2xl text-vault-cream mb-2">Your cart is empty</h2>
+        <h2 className="font-display text-2xl text-vault-grey-800 mb-2">Your cart is empty</h2>
         <p className="text-gray-400">Browse books and add them to your borrowing cart</p>
       </div>
     );
@@ -32,7 +32,7 @@ export default function CartPage({ cart, setCart, onBorrow }) {
     <div className="animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-xl font-bold text-vault-cream">
+        <h2 className="font-display text-xl font-bold text-vault-grey-600">
           {cart.length} Book{cart.length !== 1 ? 's' : ''} in Cart
         </h2>
         {availableBooks.length > 0 && (
