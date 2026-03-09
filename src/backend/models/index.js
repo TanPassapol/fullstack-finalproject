@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // ─── Book ─────────────────────────────────────────────────────────────────────
 const BookSchema = new mongoose.Schema({
@@ -17,41 +17,36 @@ const BookSchema = new mongoose.Schema({
   tags:        [String],
   avgRating:   { type: Number, default: 0 },
   ratingCount: { type: Number, default: 0 },
-  // Soft delete
   deletedAt:   { type: Date, default: null },
   isDeleted:   { type: Boolean, default: false },
-  // Scryfall-like external ID mapping
   externalId:  { type: String },
 }, { timestamps: true });
 
 BookSchema.index({ title: 'text', author: 'text', genre: 'text', tags: 'text' });
 
-// Only return non-deleted books by default
 BookSchema.pre(/^find/, function(next) {
-  if (!this._mongooseOptions.includeDeleted) {
-    this.where({ isDeleted: false });
-  }
+  if (!this._mongooseOptions.includeDeleted) this.where({ isDeleted: false });
   next();
 });
 
 // ─── Transaction ──────────────────────────────────────────────────────────────
 const TransactionSchema = new mongoose.Schema({
-  user:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  book:        { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
-  status:      { type: String, enum: ['borrowed', 'returned', 'overdue', 'reserved'], default: 'borrowed' },
-  borrowedAt:  { type: Date, default: Date.now },
-  dueDate:     { type: Date, required: true },
-  returnedAt:  { type: Date },
-  renewCount:  { type: Number, default: 0 },
-  fine:        { type: Number, default: 0 },
-  notes:       { type: String },
+  user:       { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  book:       { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
+  status:     { type: String, enum: ['borrowed', 'returned', 'overdue', 'reserved'], default: 'borrowed' },
+  borrowedAt: { type: Date, default: Date.now },
+  dueDate:    { type: Date, required: true },
+  returnedAt: { type: Date },
+  renewCount: { type: Number, default: 0 },
+  fine:       { type: Number, default: 0 },
+  notes:      { type: String },
 }, { timestamps: true });
 
 // ─── Token Blacklist ──────────────────────────────────────────────────────────
 const TokenBlacklistSchema = new mongoose.Schema({
   token:     { type: String, required: true, index: true },
   expiresAt: { type: Date, required: true },
-}, { expires: '7d' }); // TTL index - auto-purge
+}, { expires: '7d' });
 
 // ─── Review ───────────────────────────────────────────────────────────────────
 const ReviewSchema = new mongoose.Schema({
@@ -61,18 +56,16 @@ const ReviewSchema = new mongoose.Schema({
   comment: { type: String, maxlength: 1000 },
 }, { timestamps: true });
 
-ReviewSchema.index({ user: 1, book: 1 }, { unique: true }); // one review per user per book
+ReviewSchema.index({ user: 1, book: 1 }, { unique: true });
 
-// Cart (client-side, but persist server-side per user)
+// ─── Cart ─────────────────────────────────────────────────────────────────────
 const CartSchema = new mongoose.Schema({
   user:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   items: [{ book: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' }, addedAt: { type: Date, default: Date.now } }],
 }, { timestamps: true });
 
-module.exports = {
-  Book:           mongoose.model('Book', BookSchema),
-  Transaction:    mongoose.model('Transaction', TransactionSchema),
-  TokenBlacklist: mongoose.model('TokenBlacklist', TokenBlacklistSchema),
-  Review:         mongoose.model('Review', ReviewSchema),
-  Cart:           mongoose.model('Cart', CartSchema),
-};
+export const Book           = mongoose.model('Book', BookSchema);
+export const Transaction    = mongoose.model('Transaction', TransactionSchema);
+export const TokenBlacklist = mongoose.model('TokenBlacklist', TokenBlacklistSchema);
+export const Review         = mongoose.model('Review', ReviewSchema);
+export const Cart           = mongoose.model('Cart', CartSchema);

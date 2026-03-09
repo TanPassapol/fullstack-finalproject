@@ -1,16 +1,15 @@
-// routes/users.js
-const router = require('express').Router();
-const User = require('../models/User');
-const { Cart, Transaction } = require('../models/index');
-const { verifyToken, requireRole } = require('../middleware/auth');
+import { Router } from 'express';
+import User from '../models/User.js';
+import { Cart, Transaction } from '../models/index.js';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 
-// GET /api/users/me
+const router = Router();
+
 router.get('/me', verifyToken, async (req, res) => {
   const user = await User.findById(req.user.id).select('-password -loginAttempts -lockUntil');
   res.json(user);
 });
 
-// Cart operations
 router.get('/cart', verifyToken, async (req, res) => {
   const cart = await Cart.findOne({ user: req.user.id }).populate('items.book', 'title author coverImage available avgRating');
   res.json(cart || { items: [] });
@@ -35,7 +34,6 @@ router.delete('/cart/:bookId', verifyToken, async (req, res) => {
   res.json(cart);
 });
 
-// Admin: list all users
 router.get('/', verifyToken, requireRole('admin'), async (req, res) => {
   const { page = 1, limit = 20, q } = req.query;
   const filter = q ? { $or: [{ name: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }] } : {};
@@ -46,7 +44,6 @@ router.get('/', verifyToken, requireRole('admin'), async (req, res) => {
   res.json({ users, total });
 });
 
-// Admin: change user role
 router.patch('/:id/role', verifyToken, requireRole('admin'), async (req, res) => {
   const { role } = req.body;
   if (!['user', 'librarian', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
@@ -54,4 +51,4 @@ router.patch('/:id/role', verifyToken, requireRole('admin'), async (req, res) =>
   res.json(user);
 });
 
-module.exports = router;
+export default router;

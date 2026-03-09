@@ -1,7 +1,9 @@
-// routes/reviews.js
-const router = require('express').Router();
-const { Review, Book } = require('../models/index');
-const { verifyToken } = require('../middleware/auth');
+import { Router } from 'express';
+import mongoose from 'mongoose';
+import { Review, Book } from '../models/index.js';
+import { verifyToken } from '../middleware/auth.js';
+
+const router = Router();
 
 router.get('/book/:bookId', async (req, res) => {
   const reviews = await Review.find({ book: req.params.bookId }).populate('user', 'name avatar').sort('-createdAt');
@@ -16,9 +18,8 @@ router.post('/', verifyToken, async (req, res) => {
       { rating, comment },
       { upsert: true, new: true, runValidators: true }
     );
-    // Update book average
     const stats = await Review.aggregate([
-      { $match: { book: require('mongoose').Types.ObjectId(bookId) } },
+      { $match: { book: new mongoose.Types.ObjectId(bookId) } },
       { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
     ]);
     if (stats.length) {
@@ -28,4 +29,4 @@ router.post('/', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;
